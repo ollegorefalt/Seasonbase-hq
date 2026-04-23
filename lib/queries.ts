@@ -75,8 +75,7 @@ export async function getOverviewMetrics(): Promise<OverviewMetrics> {
     supabase.from('waitlist_entries').select('*', { count: 'exact', head: true }).gte('created_at', last14),
     supabase.from('waitlist_entries').select('*', { count: 'exact', head: true }).gte('created_at', prev14).lt('created_at', last14),
     supabase.from('employers').select('*', { count: 'exact', head: true }),
-    supabase.from('employers').select('*', { count: 'exact', head: true }).in('status', ['lead', 'contacted', 'meeting booked', 'follow-up']),
-    supabase.from('meetings').select('*', { count: 'exact', head: true }).gte('meeting_date', monthStart),
+    supabase.from('employers').select('*', { count: 'exact', head: true }).in('status', ['lead', 'contacted', 'meeting booked', 'follow-up', 'interest']),    supabase.from('meetings').select('*', { count: 'exact', head: true }).gte('meeting_date', monthStart),
   ]);
 
   const recent14 = signups14Res.count ?? 0;
