@@ -10,15 +10,43 @@ import type {
 } from '@/types/dashboard';
 
 function safeAnswers(record: unknown): Record<string, unknown> | null {
+  if (!record) return null;
+
+  if (typeof record === 'string') {
+    try {
+      const parsed = JSON.parse(record);
+      return parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown>) : null;
+    } catch {
+      return null;
+    }
+  }
+
   return record && typeof record === 'object' ? (record as Record<string, unknown>) : null;
 }
 
 function extractDestinations(answers: Record<string, unknown> | null): string[] {
   if (!answers) return [];
-  const candidates = [answers.destinations, answers.destination, answers.destinations_selected, answers.preferred_destinations];
+
+  const candidates = [
+    answers.destinations,
+    answers.destination,
+    answers.destinations_selected,
+    answers.preferred_destinations,
+  ];
+
   const found = candidates.find((value) => value !== undefined && value !== null);
-  if (Array.isArray(found)) return found.filter((x): x is string => typeof x === 'string');
-  if (typeof found === 'string') return found.split(',').map((x) => x.trim()).filter(Boolean);
+
+  if (Array.isArray(found)) {
+    return found.filter((x): x is string => typeof x === 'string');
+  }
+
+  if (typeof found === 'string') {
+    return found
+      .split(',')
+      .map((x) => x.trim())
+      .filter(Boolean);
+  }
+
   return [];
 }
 
@@ -41,11 +69,11 @@ export async function getOverviewMetrics(): Promise<OverviewMetrics> {
     activeLeadsRes,
     meetingsMonthRes,
   ] = await Promise.all([
-    supabase.from('waitlist_signups').select('*', { count: 'exact', head: true }),
-    supabase.from('waitlist_signups').select('*', { count: 'exact', head: true }).gte('created_at', last30),
-    supabase.from('waitlist_signups').select('*', { count: 'exact', head: true }).gte('created_at', last7),
-    supabase.from('waitlist_signups').select('*', { count: 'exact', head: true }).gte('created_at', last14),
-    supabase.from('waitlist_signups').select('*', { count: 'exact', head: true }).gte('created_at', prev14).lt('created_at', last14),
+    supabase.from('waitlist_entries').select('*', { count: 'exact', head: true }),
+    supabase.from('waitlist_entries').select('*', { count: 'exact', head: true }).gte('created_at', last30),
+    supabase.from('waitlist_entries').select('*', { count: 'exact', head: true }).gte('created_at', last7),
+    supabase.from('waitlist_entries').select('*', { count: 'exact', head: true }).gte('created_at', last14),
+    supabase.from('waitlist_entries').select('*', { count: 'exact', head: true }).gte('created_at', prev14).lt('created_at', last14),
     supabase.from('employers').select('*', { count: 'exact', head: true }),
     supabase.from('employers').select('*', { count: 'exact', head: true }).in('status', ['lead', 'contacted', 'meeting booked', 'follow-up']),
     supabase.from('meetings').select('*', { count: 'exact', head: true }).gte('meeting_date', monthStart),
@@ -71,12 +99,12 @@ export async function getSignupsByDay(days = 30): Promise<SignupByDay[]> {
   const since = subDays(new Date(), days).toISOString();
 
   const { data, error } = await supabase
-    .from('waitlist_signups')
+    .from('waitlist_entries')
     .select('created_at')
     .gte('created_at', since)
     .order('created_at', { ascending: true });
 
-  if (error) return [];
+  if (error || !data) return [];
 
   const map = new Map<string, number>();
   data.forEach((row) => {
@@ -90,12 +118,13 @@ export async function getSignupsByDay(days = 30): Promise<SignupByDay[]> {
 export async function getTopDestinations(limit = 8): Promise<TopDestination[]> {
   const supabase = createSupabaseAdminClient();
   const { data, error } = await supabase
-    .from('waitlist_signups')
+    .from('waitlist_entries')
     .select('answers');
 
   if (error || !data) return [];
 
   const counts = new Map<string, number>();
+
   data.forEach((row) => {
     const destinations = extractDestinations(safeAnswers(row.answers));
     destinations.forEach((destination) => {
@@ -142,7 +171,7 @@ export async function getLatestEmployers(limit = 12): Promise<EmployerRow[]> {
 export async function getRecentSignups(limit = 12): Promise<SignupRow[]> {
   const supabase = createSupabaseAdminClient();
   const { data, error } = await supabase
-    .from('waitlist_signups')
+    .from('waitlist_entries')
     .select('id, created_at, name, email, answers')
     .order('created_at', { ascending: false })
     .limit(limit);
