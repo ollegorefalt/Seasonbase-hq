@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { format } from 'date-fns';
 import type { EmployerRow } from '@/types/dashboard';
 
@@ -31,7 +32,11 @@ export function EmployerTable({ rows }: { rows: EmployerRow[] }) {
         <tbody>
           {rows.map((row) => (
             <tr key={row.id}>
-              <td>{row.company_name}</td>
+              <td>
+                <Link href={`/employers/${row.id}`}>
+                  {row.company_name}
+                </Link>
+              </td>
               <td>
                 <div>{row.contact_name ?? '—'}</div>
                 <div className="small">{row.contact_email ?? ''}</div>
