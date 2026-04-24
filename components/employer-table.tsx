@@ -33,7 +33,7 @@ export function EmployerTable({ rows }: { rows: EmployerRow[] }) {
           {rows.map((row) => (
             <tr key={row.id}>
               <td>
-                <Link href={`/employers/${row.id}`}>
+                <Link href={`/employers/${row.id}` as any}>
                   {row.company_name}
                 </Link>
               </td>
